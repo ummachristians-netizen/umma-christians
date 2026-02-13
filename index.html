@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Umma Christian Union | Home</title>
+    <link rel="stylesheet" href="umma.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <img class="brand-logo" src="https://i.ibb.co/JFkFGfd2/culogo.jpg" alt="Umma Christian Union Logo">
+            <h2>Umma Christian Union</h2>
+            <p>Faith. Fellowship. Mission.</p>
+        </div>
+        <nav class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="about.html">About</a>
+            <a href="vision.html">Vision &amp; Themes</a>
+            <a href="ministrie.html">Ministries</a>
+            <a href="event.html">Events</a>
+            <a href="gallery.html">Gallery</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <div class="sidebar-footer">
+            Weekly Fellowship: Wednesday, 6:00 PM<br>
+            Main Hall, Umma University
+        </div>
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <button class="hamburger" id="hamburger" type="button" aria-label="Open menu">&#9776;</button>
+            <h3>Welcome to Umma Christian Union</h3>
+            <div class="topbar-actions">
+                <a class="btn btn-outline" href="event.html">See Events</a>
+            </div>
+        </header>
+
+        <section class="content">
+            <section class="hero">
+                <span class="hero-tag">Umma University Student Fellowship</span>
+                <h1>Raising Christ-centered students for impact on campus and beyond.</h1>
+                <p>
+                    Umma Christian Union exists to nurture spiritual growth through worship, discipleship,
+                    prayer, leadership training, and practical service.
+                </p>
+                <div class="hero-cta">
+                    <a class="btn btn-primary" href="contact.html">Join This Week</a>
+                    <a class="btn btn-outline" href="ministrie.html">Explore Ministries</a>
+                </div>
+            </section>
+
+            <section class="grid-3">
+                <article class="card kpi">
+                    <p class="kpi-label">Theme of the Year</p>
+                    <p class="kpi-value" data-site="theme-year"></p>
+                </article>
+                <article class="card kpi">
+                    <p class="kpi-label">Theme of the Semester</p>
+                    <p class="kpi-value" data-site="theme-semester"></p>
+                </article>
+                <article class="card verse">
+                    <p class="kpi-label">Verse of the Day</p>
+                    <blockquote data-site="verse-text"></blockquote>
+                    <p class="kpi-value" data-site="verse-ref"></p>
+                </article>
+            </section>
+
+            <section class="grid-2">
+                <article class="card">
+                    <h2 class="section-title">Weekly Program</h2>
+                    <ul class="list" id="programsList"></ul>
+                </article>
+                <article class="card">
+                    <h2 class="section-title">What We Focus On</h2>
+                    <ul class="list">
+                        <li><strong>Spiritual Growth:</strong> Scripture, prayer, discipleship.</li>
+                        <li><strong>Leadership:</strong> Student mentorship and ministry training.</li>
+                        <li><strong>Mission:</strong> Evangelism, compassion, and campus transformation.</li>
+                    </ul>
+                </article>
+            </section>
+        </section>
+
+        <footer class="footer">
+            &copy; 2026 Umma Christian Union, Umma University.
+        </footer>
+    </main>
+</div>
+<div class="overlay" id="overlay"></div>
+<script type="module" src="script.js"></script>
+</body>
+</html>

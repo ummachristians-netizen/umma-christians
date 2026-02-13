@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Umma Christian Union | Ministry Office Dashboard</title>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div class="office-layout">
+    <aside class="office-sidebar" id="officeSidebar">
+        <div class="office-brand">
+            <img class="admin-logo" src="https://i.ibb.co/JFkFGfd2/culogo.jpg" alt="Umma Christian Union Logo">
+            <h3>Ministry Office</h3>
+            <p>Content Manager</p>
+        </div>
+        <nav class="office-links">
+            <a href="#programsSection" data-section="programsSection">Weekly Programs</a>
+            <a href="#eventsSection" data-section="eventsSection">Events</a>
+            <a href="#themesSection" data-section="themesSection">Verse & Themes</a>
+            <a href="#gallerySection" data-section="gallerySection">Gallery</a>
+            <a href="#statusSection" data-section="statusSection">Activity Status</a>
+        </nav>
+    </aside>
+
+    <main class="office-main" id="adminDashboard">
+        <header class="topbar">
+            <button class="hamburger-btn" id="officeHamburger" type="button" aria-label="Toggle office menu">&#9776;</button>
+            <h3>Ministry Office Dashboard <span id="officeUserEmail" class="chip"></span></h3>
+            <div class="topbar-actions">
+                <a class="btn btn-outline" href="index.html" style="text-decoration:none;">Public Site</a>
+                <button class="btn btn-danger" id="logoutBtn" type="button">Logout</button>
+            </div>
+        </header>
+
+        <section class="content">
+            <section class="grid-2 office-section" id="programsSection">
+                <article class="card admin-panel">
+                    <h3>Add Weekly Program</h3>
+                    <form id="addProgramForm">
+                        <label for="programDay">Day</label>
+                        <input type="text" id="programDay" placeholder="Wednesday" required>
+
+                        <label for="programTitle">Program Title</label>
+                        <input type="text" id="programTitle" placeholder="Main Fellowship Service" required>
+
+                        <label for="programTime">Time</label>
+                        <input type="text" id="programTime" placeholder="6:00 PM - 8:00 PM" required>
+
+                        <label for="programVenue">Venue</label>
+                        <input type="text" id="programVenue" placeholder="Main Hall" required>
+
+                        <button class="btn btn-primary" type="submit">Add Program</button>
+                    </form>
+                </article>
+
+                <article class="card admin-panel">
+                    <h3>Manage Weekly Programs</h3>
+                    <ul class="list" id="adminProgramsList"></ul>
+                </article>
+            </section>
+
+            <article class="card office-section" id="eventsSection">
+                <h2>Manage Events</h2>
+                <ul class="list" id="eventsList"></ul>
+            </article>
+
+            <section class="grid-2 office-section" id="themesSection">
+                <article class="card admin-panel">
+                    <h3>Add Event</h3>
+                    <form id="addEventForm">
+                        <label for="eventTitle">Event Title</label>
+                        <input type="text" id="eventTitle" required>
+
+                        <label for="eventDate">Date</label>
+                        <input type="date" id="eventDate" required>
+
+                        <label for="eventTime">Time</label>
+                        <input type="text" id="eventTime" placeholder="e.g. 6:00 PM - 8:00 PM" required>
+
+                        <label for="eventLocation">Location</label>
+                        <input type="text" id="eventLocation" required>
+
+                        <label for="eventCategory">Category</label>
+                        <input type="text" id="eventCategory" placeholder="Prayer, Fellowship, Outreach">
+
+                        <label for="eventDescription">Description</label>
+                        <textarea id="eventDescription" rows="3" placeholder="Brief event description"></textarea>
+
+                        <button class="btn btn-primary" type="submit">Save Event</button>
+                    </form>
+                </article>
+
+                <article class="card admin-panel">
+                    <h3>Update Verse and Themes</h3>
+                    <form id="siteConfigForm">
+                        <label for="cfgVerseRef">Verse Reference</label>
+                        <input type="text" id="cfgVerseRef" required>
+
+                        <label for="cfgVerseText">Verse Text</label>
+                        <textarea id="cfgVerseText" rows="3" required></textarea>
+
+                        <label for="cfgYearTheme">Theme of the Year</label>
+                        <input type="text" id="cfgYearTheme" required>
+
+                        <label for="cfgSemesterTheme">Theme of the Semester</label>
+                        <input type="text" id="cfgSemesterTheme" required>
+
+                        <button class="btn btn-primary" type="submit">Update Site Themes</button>
+                    </form>
+                </article>
+            </section>
+
+            <section class="grid-2 office-section" id="gallerySection">
+                <article class="card admin-panel">
+                    <h3>Add Gallery Photo</h3>
+                    <form id="photoForm">
+                        <label for="photoTitle">Photo Title</label>
+                        <input type="text" id="photoTitle" required>
+
+                        <label for="photoUrl">Image Link (Google Drive/Direct URL)</label>
+                        <input type="url" id="photoUrl" placeholder="https://drive.google.com/... or direct image URL">
+
+                        <label for="photoFile">Or Upload Image File (auto-compressed to ~1MB)</label>
+                        <input type="file" id="photoFile" accept="image/*">
+
+                        <button class="btn btn-primary" type="submit">Add Photo</button>
+                    </form>
+                </article>
+
+                <article class="card admin-panel">
+                    <h3>Manage Gallery Photos</h3>
+                    <ul class="list" id="adminPhotosList"></ul>
+                </article>
+            </section>
+
+            <article class="card admin-panel office-section" id="statusSection">
+                <p id="adminStatus" style="font-weight:700;"></p>
+            </article>
+        </section>
+    </main>
+</div>
+<div class="office-overlay" id="officeOverlay"></div>
+<script type="module" src="admin.js"></script>
+</body>
+</html>

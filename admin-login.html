@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Umma Christian Union | Ministry Office Access</title>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<main class="admin-wrap">
+    <section class="admin-card">
+        <img class="admin-logo" src="https://i.ibb.co/JFkFGfd2/culogo.jpg" alt="Umma Christian Union Logo">
+        <h2>Ministry Office Access</h2>
+        <p class="kpi-label" style="margin:8px 0 14px;">Authorized staff only. This page is separate from the public site menu.</p>
+        <form id="adminLoginForm">
+            <label for="adminEmail">Office Email</label>
+            <input id="adminEmail" type="email" placeholder="admin@ummacu.org" required>
+
+            <label for="adminPassword">Password</label>
+            <input id="adminPassword" type="password" placeholder="Enter password" required>
+
+            <button class="btn btn-primary" type="submit">Open Office Dashboard</button>
+            <button class="btn btn-outline" id="createAccountBtn" type="button">Create Office Account</button>
+            <button class="btn btn-outline" id="resetPasswordBtn" type="button">Reset Password</button>
+            <a class="btn btn-outline" href="index.html" style="text-align:center;text-decoration:none;">Return to Public Site</a>
+        </form>
+        <p id="loginStatus" style="margin-top:10px;font-weight:700;"></p>
+    </section>
+</main>
+<script type="module" src="admin.js"></script>
+</body>
+</html>
