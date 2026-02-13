@@ -7,7 +7,8 @@ import {
     onSnapshot,
     orderBy,
     query,
-    setDoc
+    setDoc,
+    updateDoc
 } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 import {
     browserLocalPersistence,
@@ -23,7 +24,8 @@ import {
     push,
     ref as dbRef,
     remove,
-    set
+    set,
+    update as updateRtdb
 } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-database.js";
 import {
     deleteObject,
@@ -33,6 +35,14 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-storage.js";
 
 const MAX_IMAGE_BYTES = 1024 * 1024;
+
+function escAttr(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
 
 function initOfficeSidebar() {
     const sidebar = document.getElementById("officeSidebar");
@@ -366,7 +376,7 @@ function initOfficeDashboard() {
         programsList.innerHTML = snap.docs
             .map((d) => {
                 const p = d.data();
-                return `<li><strong>${p.day || ""}</strong> - ${p.title || ""} (${p.time || ""}, ${p.venue || ""}) <button class="btn btn-danger" data-delete-program="${d.id}" type="button">Delete Program</button></li>`;
+                return `<li><strong>${p.day || ""}</strong> - ${p.title || ""} (${p.time || ""}, ${p.venue || ""}) <button class="btn btn-outline" data-edit-program="${d.id}" data-day="${escAttr(p.day)}" data-title="${escAttr(p.title)}" data-time="${escAttr(p.time)}" data-venue="${escAttr(p.venue)}" type="button">Edit</button> <button class="btn btn-danger" data-delete-program="${d.id}" type="button">Delete Program</button></li>`;
             })
             .join("");
     });
@@ -380,7 +390,7 @@ function initOfficeDashboard() {
         eventsList.innerHTML = snap.docs
             .map((d) => {
                 const e = d.data();
-                return `<li><strong>${e.title || ""}</strong><div class="event-meta"><span>${formatHumanDate(e.date || "")}</span><span>${e.time || ""}</span><span>${e.location || ""}</span><span class="chip">${e.category || "General"}</span></div><p>${e.description || ""}</p><button class="btn btn-danger" data-delete-event="${d.id}" type="button">Delete Event</button></li>`;
+                return `<li><strong>${e.title || ""}</strong><div class="event-meta"><span>${formatHumanDate(e.date || "")}</span><span>${e.time || ""}</span><span>${e.location || ""}</span><span class="chip">${e.category || "General"}</span></div><p>${e.description || ""}</p><button class="btn btn-outline" data-edit-event="${d.id}" data-title="${escAttr(e.title)}" data-date="${escAttr(e.date)}" data-time="${escAttr(e.time)}" data-location="${escAttr(e.location)}" data-category="${escAttr(e.category)}" data-description="${escAttr(e.description)}" type="button">Edit</button> <button class="btn btn-danger" data-delete-event="${d.id}" type="button">Delete Event</button></li>`;
             })
             .join("");
     });
@@ -397,7 +407,7 @@ function initOfficeDashboard() {
             .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         photosList.innerHTML = items
             .map(
-                (p) => `<li><strong>${p.title || ""}</strong><p>${p.url || ""}</p><button class="btn btn-danger" data-delete-photo="${p.key}" data-storage-path="${p.storagePath || ""}" type="button">Delete Photo</button></li>`
+                (p) => `<li><strong>${p.title || ""}</strong><p>${p.url || ""}</p><button class="btn btn-outline" data-edit-photo="${p.key}" data-title="${escAttr(p.title)}" data-url="${escAttr(p.url)}" type="button">Edit</button> <button class="btn btn-danger" data-delete-photo="${p.key}" data-storage-path="${p.storagePath || ""}" type="button">Delete Photo</button></li>`
             )
             .join("");
     });
@@ -510,6 +520,29 @@ function initOfficeDashboard() {
     }
 
     document.addEventListener("click", async (e) => {
+        const editProgramBtn = e.target.closest("[data-edit-program]");
+        if (editProgramBtn) {
+            const id = editProgramBtn.getAttribute("data-edit-program");
+            const day = prompt("Edit Day", editProgramBtn.getAttribute("data-day") || "");
+            if (day === null) return;
+            const title = prompt("Edit Program Title", editProgramBtn.getAttribute("data-title") || "");
+            if (title === null) return;
+            const time = prompt("Edit Time", editProgramBtn.getAttribute("data-time") || "");
+            if (time === null) return;
+            const venue = prompt("Edit Venue", editProgramBtn.getAttribute("data-venue") || "");
+            if (venue === null) return;
+
+            await updateDoc(doc(db, "programs", id), {
+                day: day.trim(),
+                title: title.trim(),
+                time: time.trim(),
+                venue: venue.trim(),
+                updatedAt: Date.now()
+            });
+            setStatus("Weekly program updated.");
+            return;
+        }
+
         const programBtn = e.target.closest("[data-delete-program]");
         if (programBtn) {
             await deleteDoc(doc(db, "programs", programBtn.getAttribute("data-delete-program")));
@@ -517,10 +550,57 @@ function initOfficeDashboard() {
             return;
         }
 
+        const editEventBtn = e.target.closest("[data-edit-event]");
+        if (editEventBtn) {
+            const id = editEventBtn.getAttribute("data-edit-event");
+            const title = prompt("Edit Event Title", editEventBtn.getAttribute("data-title") || "");
+            if (title === null) return;
+            const date = prompt("Edit Date (YYYY-MM-DD)", editEventBtn.getAttribute("data-date") || "");
+            if (date === null) return;
+            const time = prompt("Edit Time", editEventBtn.getAttribute("data-time") || "");
+            if (time === null) return;
+            const location = prompt("Edit Location", editEventBtn.getAttribute("data-location") || "");
+            if (location === null) return;
+            const category = prompt("Edit Category", editEventBtn.getAttribute("data-category") || "");
+            if (category === null) return;
+            const description = prompt("Edit Description", editEventBtn.getAttribute("data-description") || "");
+            if (description === null) return;
+
+            await updateDoc(doc(db, "events", id), {
+                title: title.trim(),
+                date: date.trim(),
+                time: time.trim(),
+                location: location.trim(),
+                category: category.trim() || "General",
+                description: description.trim(),
+                updatedAt: Date.now()
+            });
+            setStatus("Event updated.");
+            return;
+        }
+
         const eventBtn = e.target.closest("[data-delete-event]");
         if (eventBtn) {
             await deleteDoc(doc(db, "events", eventBtn.getAttribute("data-delete-event")));
             setStatus("Event removed.");
+            return;
+        }
+
+        const editPhotoBtn = e.target.closest("[data-edit-photo]");
+        if (editPhotoBtn) {
+            const key = editPhotoBtn.getAttribute("data-edit-photo");
+            const title = prompt("Edit Photo Title", editPhotoBtn.getAttribute("data-title") || "");
+            if (title === null) return;
+            const rawUrl = prompt("Edit Photo URL", editPhotoBtn.getAttribute("data-url") || "");
+            if (rawUrl === null) return;
+            const url = normalizeImageUrl(rawUrl);
+
+            await updateRtdb(dbRef(rtdb, `gallery/${key}`), {
+                title: title.trim(),
+                url: url.trim(),
+                updatedAt: Date.now()
+            });
+            setStatus("Photo updated.");
             return;
         }
 
