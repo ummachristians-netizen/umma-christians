@@ -4,6 +4,7 @@ import {
     collection,
     deleteDoc,
     doc,
+    limit,
     onSnapshot,
     orderBy,
     query,
@@ -366,6 +367,19 @@ function initOfficeDashboard() {
     const programsList = document.getElementById("adminProgramsList");
     const eventsList = document.getElementById("eventsList");
     const photosList = document.getElementById("adminPhotosList");
+    const activityFeed = document.getElementById("activityFeed");
+
+    const logActivity = async (message, type = "info") => {
+        try {
+            await addDoc(collection(db, "activity_logs"), {
+                message,
+                type,
+                createdAt: Date.now()
+            });
+        } catch (_) {
+            // non-blocking
+        }
+    };
 
     onSnapshot(query(collection(db, "programs"), orderBy("createdAt", "desc")), (snap) => {
         if (!programsList) return;
@@ -412,6 +426,23 @@ function initOfficeDashboard() {
             .join("");
     });
 
+    if (activityFeed) {
+        const activityQuery = query(collection(db, "activity_logs"), orderBy("createdAt", "desc"), limit(40));
+        onSnapshot(activityQuery, (snap) => {
+            if (snap.empty) {
+                activityFeed.innerHTML = "<li>No activity yet.</li>";
+                return;
+            }
+            activityFeed.innerHTML = snap.docs
+                .map((d) => {
+                    const a = d.data();
+                    const time = formatHumanDate(new Date(a.createdAt || Date.now()).toISOString());
+                    return `<li><strong>${a.message || "Update"}</strong><div class="event-meta"><span>${time}</span><span class="chip">${a.type || "info"}</span></div></li>`;
+                })
+                .join("");
+        });
+    }
+
     const addProgramForm = document.getElementById("addProgramForm");
     if (addProgramForm) {
         addProgramForm.addEventListener("submit", async (e) => {
@@ -426,6 +457,7 @@ function initOfficeDashboard() {
             await addDoc(collection(db, "programs"), payload);
             addProgramForm.reset();
             setStatus("Weekly program added.");
+            await logActivity(`Added weekly program: ${payload.day} - ${payload.title}`, "program");
         });
     }
 
@@ -445,6 +477,7 @@ function initOfficeDashboard() {
             await addDoc(collection(db, "events"), payload);
             addEventForm.reset();
             setStatus("Event added.");
+            await logActivity(`Added event: ${payload.title}`, "event");
         });
     }
 
@@ -455,7 +488,7 @@ function initOfficeDashboard() {
             document.getElementById("cfgVerseRef").value = cfg.verseReference || "";
             document.getElementById("cfgVerseText").value = cfg.verseText || "";
             document.getElementById("cfgYearTheme").value = cfg.themeYear || "";
-            document.getElementById("cfgSemesterTheme").value = cfg.themeSemester || "";
+            document.getElementById("cfgDayTheme").value = cfg.themeDay || cfg.themeSemester || "";
         });
 
         cfgForm.addEventListener("submit", async (e) => {
@@ -464,11 +497,12 @@ function initOfficeDashboard() {
                 verseReference: document.getElementById("cfgVerseRef").value.trim(),
                 verseText: document.getElementById("cfgVerseText").value.trim(),
                 themeYear: document.getElementById("cfgYearTheme").value.trim(),
-                themeSemester: document.getElementById("cfgSemesterTheme").value.trim(),
+                themeDay: document.getElementById("cfgDayTheme").value.trim(),
                 updatedAt: Date.now()
             };
             await setDoc(doc(db, "site_config", "current"), payload, { merge: true });
             setStatus("Verse and themes updated.");
+            await logActivity("Updated verse and themes", "theme");
         });
     }
 
@@ -513,6 +547,7 @@ function initOfficeDashboard() {
 
                 photoForm.reset();
                 setStatus("Gallery item added successfully.");
+                await logActivity(`Added gallery item: ${title}`, "gallery");
             } catch (_) {
                 setStatus("Failed to add gallery item. Check the link or image file.", true);
             }
@@ -540,6 +575,7 @@ function initOfficeDashboard() {
                 updatedAt: Date.now()
             });
             setStatus("Weekly program updated.");
+            await logActivity(`Updated weekly program: ${day.trim()} - ${title.trim()}`, "program");
             return;
         }
 
@@ -547,6 +583,7 @@ function initOfficeDashboard() {
         if (programBtn) {
             await deleteDoc(doc(db, "programs", programBtn.getAttribute("data-delete-program")));
             setStatus("Weekly program removed.");
+            await logActivity("Deleted a weekly program", "program");
             return;
         }
 
@@ -576,6 +613,7 @@ function initOfficeDashboard() {
                 updatedAt: Date.now()
             });
             setStatus("Event updated.");
+            await logActivity(`Updated event: ${title.trim()}`, "event");
             return;
         }
 
@@ -583,6 +621,7 @@ function initOfficeDashboard() {
         if (eventBtn) {
             await deleteDoc(doc(db, "events", eventBtn.getAttribute("data-delete-event")));
             setStatus("Event removed.");
+            await logActivity("Deleted an event", "event");
             return;
         }
 
@@ -601,6 +640,7 @@ function initOfficeDashboard() {
                 updatedAt: Date.now()
             });
             setStatus("Photo updated.");
+            await logActivity(`Updated gallery item: ${title.trim()}`, "gallery");
             return;
         }
 
@@ -617,6 +657,7 @@ function initOfficeDashboard() {
                 }
             }
             setStatus("Photo removed.");
+            await logActivity("Deleted a gallery item", "gallery");
         }
     });
 }

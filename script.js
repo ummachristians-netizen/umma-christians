@@ -94,7 +94,7 @@ async function loadSiteConfig() {
     if (verseTextEl) verseTextEl.textContent = cfg.verseText || "Verse will be published by the ministry office.";
     if (verseRefEl) verseRefEl.textContent = cfg.verseReference || "-";
     if (yearThemeEl) yearThemeEl.textContent = cfg.themeYear || "Not set yet.";
-    if (semThemeEl) semThemeEl.textContent = cfg.themeSemester || "Not set yet.";
+    if (semThemeEl) semThemeEl.textContent = cfg.themeDay || cfg.themeSemester || "Not set yet.";
 }
 
 function watchPrograms() {

@@ -105,8 +105,8 @@
                         <label for="cfgYearTheme">Theme of the Year</label>
                         <input type="text" id="cfgYearTheme" required>
 
-                        <label for="cfgSemesterTheme">Theme of the Semester</label>
-                        <input type="text" id="cfgSemesterTheme" required>
+                        <label for="cfgDayTheme">Theme of the Day</label>
+                        <input type="text" id="cfgDayTheme" required>
 
                         <button class="btn btn-primary" type="submit">Update Site Themes</button>
                     </form>
@@ -137,7 +137,9 @@
             </section>
 
             <article class="card admin-panel office-section" id="statusSection">
+                <h3>Activity Status</h3>
                 <p id="adminStatus" style="font-weight:700;"></p>
+                <ul class="list" id="activityFeed"></ul>
             </article>
         </section>
     </main>
