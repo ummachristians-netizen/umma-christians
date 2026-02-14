@@ -12,6 +12,21 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
 import { onValue, ref } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-database.js";
 
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
+
+function escapeAttr(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
+
 function toBase64UrlUtf8(value) {
     const bytes = new TextEncoder().encode(value);
     let binary = "";
@@ -212,26 +227,29 @@ function watchEvents() {
 
 function watchGallery() {
     const container = document.getElementById("galleryGrid");
+    const status = document.getElementById("galleryPublishedStatus");
     if (!container) return;
     onValue(ref(rtdb, "gallery"), (snap) => {
         const value = snap.val();
         if (!value) {
             container.innerHTML = "<p>No photos published yet.</p>";
+            if (status) status.textContent = "No photos published yet.";
             return;
         }
         const items = Object.entries(value)
             .map(([key, item]) => ({ key, ...item }))
             .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        if (status) status.textContent = `Photos published: ${items.length}`;
 
         container.innerHTML = items
             .map(
                 (photo) => {
                     const imageSrc = photo.image ? `data:image/jpeg;base64,${photo.image}` : normalizeCloudImageUrl(photo.url || "");
-                    const title = photo.title || "Untitled";
+                    const title = escapeHtml(photo.title || "Untitled");
                     const link = (photo.link || "").trim();
                     const body = `
                         <div style="width:100%;min-height:220px;display:grid;place-items:center;background:#f5f8fd;border:1px solid #dde6f2;border-radius:10px;padding:8px;">
-                            <img src="${imageSrc}" alt="${title || "Gallery photo"}" style="width:100%;height:auto;max-height:420px;object-fit:contain;border-radius:8px;display:block;">
+                            <img src="${escapeAttr(imageSrc)}" alt="${escapeAttr(title || "Gallery photo")}" style="width:100%;height:auto;max-height:420px;object-fit:contain;border-radius:8px;display:block;">
                         </div>
                         <h3 style="margin-top:10px;">${title}</h3>
                     `;
@@ -239,15 +257,15 @@ function watchGallery() {
                     if (link) {
                         return `
                             <article class="card">
-                                <a href="${link}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;color:inherit;display:block;">
-                                    ${body}
-                                </a>
+                                ${body}
+                                <a class="btn btn-outline gallery-open-btn" href="${escapeAttr(link)}" target="_blank" rel="noopener noreferrer">Open ${title}</a>
                             </article>`;
                     }
 
                     return `
                         <article class="card">
                             ${body}
+                            <p style="margin-top:8px;color:#5a6a82;">No Drive link attached for this photo.</p>
                         </article>`;
                 }
             )

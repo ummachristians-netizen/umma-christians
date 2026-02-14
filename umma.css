@@ -180,6 +180,14 @@ a {
     border: 1px solid #efc5c2;
 }
 
+.gallery-open-btn {
+    margin-top: 8px;
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    text-decoration: none;
+}
+
 .content {
     padding: 24px;
     display: grid;
