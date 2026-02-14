@@ -258,7 +258,7 @@ function watchGallery() {
                         return `
                             <article class="card">
                                 ${body}
-                                <a class="btn btn-outline gallery-open-btn" href="${escapeAttr(link)}" target="_blank" rel="noopener noreferrer">Open ${title}</a>
+                                <a class="btn btn-outline gallery-open-btn" href="${escapeAttr(link)}" target="_blank" rel="noopener noreferrer">Open Gallery</a>
                             </article>`;
                     }
 
