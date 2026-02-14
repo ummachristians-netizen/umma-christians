@@ -383,7 +383,10 @@ function initOfficeDashboard() {
         activityFeed.innerHTML = items
             .map((a) => {
                 const time = formatHumanDate(new Date(toMillis(a.createdAt)).toISOString());
-                return `<li><strong>${a.message || "Update"}</strong><div class="event-meta"><span>${time}</span><span class="chip">${a.type || "info"}</span></div></li>`;
+                const deleteBtn = a.id
+                    ? ` <button class="btn btn-danger" data-delete-activity="${a.id}" type="button">Delete</button>`
+                    : "";
+                return `<li><strong>${a.message || "Update"}</strong><div class="event-meta"><span>${time}</span><span class="chip">${a.type || "info"}</span>${deleteBtn}</div></li>`;
             })
             .join("");
     };
@@ -451,7 +454,7 @@ function initOfficeDashboard() {
             .map(
                 (p) => {
                     const imageSrc = p.image ? `data:image/jpeg;base64,${p.image}` : (p.url || "");
-                    return `<li><strong>${p.title || ""}</strong><p><img src="${imageSrc}" alt="${escAttr(p.title)}" style="width:100%;max-width:220px;border-radius:8px;border:1px solid #dde6f2;"></p><button class="btn btn-outline" data-edit-photo="${p.key}" data-title="${escAttr(p.title)}" type="button">Edit</button> <button class="btn btn-danger" data-delete-photo="${p.key}" type="button">Delete Photo</button></li>`;
+                    return `<li><strong>${p.title || ""}</strong><p><img src="${imageSrc}" alt="${escAttr(p.title)}" style="width:100%;max-width:220px;border-radius:8px;border:1px solid #dde6f2;"></p><p>${p.link ? `Opens: ${escAttr(p.link)}` : "No external link set."}</p><button class="btn btn-outline" data-edit-photo="${p.key}" data-title="${escAttr(p.title)}" data-link="${escAttr(p.link || "")}" type="button">Edit</button> <button class="btn btn-danger" data-delete-photo="${p.key}" type="button">Delete Photo</button></li>`;
                 }
             )
             .join("");
@@ -466,7 +469,7 @@ function initOfficeDashboard() {
                     renderActivityItems(localActivityItems);
                     return;
                 }
-                localActivityItems = snap.docs.map((d) => d.data());
+                localActivityItems = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
                 renderActivityItems(localActivityItems);
             },
             () => {
@@ -552,6 +555,7 @@ function initOfficeDashboard() {
         photoForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             const title = document.getElementById("photoTitle").value.trim();
+            const link = document.getElementById("photoDriveLink").value.trim();
             const file = document.getElementById("photoFile").files[0];
             if (!title || !file) {
                 setStatus("Photo title and image file are required.", true);
@@ -571,6 +575,7 @@ function initOfficeDashboard() {
                 await set(photoRef, {
                     title,
                     image: imageBase64,
+                    link: link || "",
                     createdAt: Date.now()
                 });
 
@@ -584,6 +589,15 @@ function initOfficeDashboard() {
     }
 
     document.addEventListener("click", async (e) => {
+        const activityBtn = e.target.closest("[data-delete-activity]");
+        if (activityBtn) {
+            const id = activityBtn.getAttribute("data-delete-activity");
+            if (!id) return;
+            await deleteDoc(doc(db, "activity_logs", id));
+            setStatus("Activity item deleted.");
+            return;
+        }
+
         const editProgramBtn = e.target.closest("[data-edit-program]");
         if (editProgramBtn) {
             const id = editProgramBtn.getAttribute("data-edit-program");
@@ -659,6 +673,8 @@ function initOfficeDashboard() {
             const key = editPhotoBtn.getAttribute("data-edit-photo");
             const title = prompt("Edit Photo Title", editPhotoBtn.getAttribute("data-title") || "");
             if (title === null) return;
+            const link = prompt("Edit Drive/OneDrive Link (optional)", editPhotoBtn.getAttribute("data-link") || "");
+            if (link === null) return;
             const currentSnap = await get(dbRef(rtdb, `gallery/${key}`));
             const current = currentSnap.val();
             if (!current || !current.image) {
@@ -669,6 +685,7 @@ function initOfficeDashboard() {
             await set(dbRef(rtdb, `gallery/${key}`), {
                 title: title.trim(),
                 image: current.image,
+                link: link.trim(),
                 createdAt: current.createdAt || Date.now(),
                 updatedAt: Date.now()
             });

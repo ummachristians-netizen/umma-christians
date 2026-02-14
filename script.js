@@ -168,11 +168,31 @@ function watchGallery() {
 
         container.innerHTML = items
             .map(
-                (photo) => `
-                <article class="card">
-                    <img src="${photo.image ? `data:image/jpeg;base64,${photo.image}` : (photo.url || "")}" alt="${photo.title || "Gallery photo"}" style="width:100%;height:220px;object-fit:cover;border-radius:10px;">
-                    <h3 style="margin-top:10px;">${photo.title || "Untitled"}</h3>
-                </article>`
+                (photo) => {
+                    const imageSrc = photo.image ? `data:image/jpeg;base64,${photo.image}` : (photo.url || "");
+                    const title = photo.title || "Untitled";
+                    const link = (photo.link || "").trim();
+                    const body = `
+                        <div style="width:100%;min-height:220px;display:grid;place-items:center;background:#f5f8fd;border:1px solid #dde6f2;border-radius:10px;padding:8px;">
+                            <img src="${imageSrc}" alt="${title || "Gallery photo"}" style="width:100%;height:auto;max-height:420px;object-fit:contain;border-radius:8px;display:block;">
+                        </div>
+                        <h3 style="margin-top:10px;">${title}</h3>
+                    `;
+
+                    if (link) {
+                        return `
+                            <article class="card">
+                                <a href="${link}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;color:inherit;display:block;">
+                                    ${body}
+                                </a>
+                            </article>`;
+                    }
+
+                    return `
+                        <article class="card">
+                            ${body}
+                        </article>`;
+                }
             )
             .join("");
     });
