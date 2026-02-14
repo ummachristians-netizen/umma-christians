@@ -212,6 +212,65 @@ function fileToBase64NoPrefix(file) {
     });
 }
 
+function toBase64UrlUtf8(value) {
+    const bytes = new TextEncoder().encode(value);
+    let binary = "";
+    bytes.forEach((b) => {
+        binary += String.fromCharCode(b);
+    });
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function normalizeGoogleDriveImageUrl(rawUrl) {
+    try {
+        const url = new URL(rawUrl);
+        if (!url.hostname.includes("drive.google.com")) return rawUrl;
+
+        const fileMatch = url.pathname.match(/\/file\/d\/([^/]+)/);
+        if (fileMatch?.[1]) {
+            return `https://drive.google.com/uc?export=view&id=${fileMatch[1]}`;
+        }
+
+        const id = url.searchParams.get("id");
+        if (id) return `https://drive.google.com/uc?export=view&id=${id}`;
+
+        return rawUrl;
+    } catch (_) {
+        return rawUrl;
+    }
+}
+
+function normalizeOneDriveImageUrl(rawUrl) {
+    try {
+        const url = new URL(rawUrl);
+        const host = url.hostname.toLowerCase();
+        if (!host.includes("onedrive.live.com") && !host.includes("1drv.ms")) return rawUrl;
+
+        if (host.includes("1drv.ms")) {
+            const encoded = toBase64UrlUtf8(rawUrl);
+            return `https://api.onedrive.com/v1.0/shares/u!${encoded}/root/content`;
+        }
+
+        const cid = url.searchParams.get("cid");
+        const resid = url.searchParams.get("resid");
+        if (cid && resid) {
+            return `https://onedrive.live.com/download?cid=${encodeURIComponent(cid)}&resid=${encodeURIComponent(resid)}&authkey=${encodeURIComponent(url.searchParams.get("authkey") || "")}`;
+        }
+
+        return rawUrl;
+    } catch (_) {
+        return rawUrl;
+    }
+}
+
+function normalizeCloudImageUrl(rawUrl) {
+    const trimmed = String(rawUrl || "").trim();
+    if (!trimmed) return "";
+    if (trimmed.includes("drive.google.com")) return normalizeGoogleDriveImageUrl(trimmed);
+    if (trimmed.includes("1drv.ms") || trimmed.includes("onedrive.live.com")) return normalizeOneDriveImageUrl(trimmed);
+    return trimmed;
+}
+
 async function compressImageTo1MB(file) {
     if (file.size <= MAX_IMAGE_BYTES) return file;
 
@@ -453,8 +512,8 @@ function initOfficeDashboard() {
         photosList.innerHTML = items
             .map(
                 (p) => {
-                    const imageSrc = p.image ? `data:image/jpeg;base64,${p.image}` : (p.url || "");
-                    return `<li><strong>${p.title || ""}</strong><p><img src="${imageSrc}" alt="${escAttr(p.title)}" style="width:100%;max-width:220px;border-radius:8px;border:1px solid #dde6f2;"></p><p>${p.link ? `Opens: ${escAttr(p.link)}` : "No external link set."}</p><button class="btn btn-outline" data-edit-photo="${p.key}" data-title="${escAttr(p.title)}" data-link="${escAttr(p.link || "")}" type="button">Edit</button> <button class="btn btn-danger" data-delete-photo="${p.key}" type="button">Delete Photo</button></li>`;
+                    const imageSrc = p.image ? `data:image/jpeg;base64,${p.image}` : normalizeCloudImageUrl(p.url || "");
+                    return `<li><strong>${p.title || ""}</strong><p><img src="${imageSrc}" alt="${escAttr(p.title)}" style="width:100%;max-width:220px;border-radius:8px;border:1px solid #dde6f2;"></p><p>${p.link ? `Opens: ${escAttr(p.link)}` : "No external link set."}</p><p>${p.url ? `Image URL: ${escAttr(p.url)}` : "Image source: uploaded file."}</p><button class="btn btn-outline" data-edit-photo="${p.key}" data-title="${escAttr(p.title)}" data-link="${escAttr(p.link || "")}" data-url="${escAttr(p.url || "")}" type="button">Edit</button> <button class="btn btn-danger" data-delete-photo="${p.key}" type="button">Delete Photo</button></li>`;
                 }
             )
             .join("");
@@ -555,26 +614,34 @@ function initOfficeDashboard() {
         photoForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             const title = document.getElementById("photoTitle").value.trim();
+            const imageLinkRaw = document.getElementById("photoImageLink").value.trim();
             const link = document.getElementById("photoDriveLink").value.trim();
-            const file = document.getElementById("photoFile").files[0];
-            if (!title || !file) {
-                setStatus("Photo title and image file are required.", true);
+            const fileInput = document.getElementById("photoFile");
+            const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+            const imageLink = normalizeCloudImageUrl(imageLinkRaw);
+
+            if (!title || (!file && !imageLink)) {
+                setStatus("Photo title and either image file or cloud image link are required.", true);
                 return;
             }
             try {
-                setStatus("Compressing image...");
-                const compressedFile = await compressImageTo1MB(file);
-                const imageBase64 = await fileToBase64NoPrefix(compressedFile);
+                let imageBase64 = "";
+                if (file) {
+                    setStatus("Compressing image...");
+                    const compressedFile = await compressImageTo1MB(file);
+                    imageBase64 = await fileToBase64NoPrefix(compressedFile);
 
-                if (imageBase64.length >= 1500000) {
-                    setStatus("Image is still too large after compression. Use a smaller image.", true);
-                    return;
+                    if (imageBase64.length >= 1500000) {
+                        setStatus("Image is still too large after compression. Use a smaller image.", true);
+                        return;
+                    }
                 }
 
                 const photoRef = push(dbRef(rtdb, "gallery"));
                 await set(photoRef, {
                     title,
-                    image: imageBase64,
+                    image: imageBase64 || "",
+                    url: imageBase64 ? "" : imageLink,
                     link: link || "",
                     createdAt: Date.now()
                 });
@@ -673,18 +740,22 @@ function initOfficeDashboard() {
             const key = editPhotoBtn.getAttribute("data-edit-photo");
             const title = prompt("Edit Photo Title", editPhotoBtn.getAttribute("data-title") || "");
             if (title === null) return;
+            const imageUrlRaw = prompt("Edit Google Drive/OneDrive Image Link (optional)", editPhotoBtn.getAttribute("data-url") || "");
+            if (imageUrlRaw === null) return;
             const link = prompt("Edit Drive/OneDrive Link (optional)", editPhotoBtn.getAttribute("data-link") || "");
             if (link === null) return;
             const currentSnap = await get(dbRef(rtdb, `gallery/${key}`));
             const current = currentSnap.val();
-            if (!current || !current.image) {
-                setStatus("Photo record missing image payload.", true);
+            if (!current || (!current.image && !current.url)) {
+                setStatus("Photo record has no image payload.", true);
                 return;
             }
+            const imageUrl = normalizeCloudImageUrl(imageUrlRaw.trim());
 
             await set(dbRef(rtdb, `gallery/${key}`), {
                 title: title.trim(),
-                image: current.image,
+                image: current.image || "",
+                url: imageUrl || current.url || "",
                 link: link.trim(),
                 createdAt: current.createdAt || Date.now(),
                 updatedAt: Date.now()

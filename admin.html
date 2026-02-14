@@ -132,11 +132,18 @@
                         <label for="photoTitle">Photo Title</label>
                         <input type="text" id="photoTitle" required>
 
-                        <label for="photoDriveLink">Drive/OneDrive Link (optional, opens when user clicks photo)</label>
+                        <label for="photoImageLink">Google Drive / OneDrive Image Link (optional)</label>
+                        <input type="url" id="photoImageLink" placeholder="https://drive.google.com/file/d/... or https://1drv.ms/...">
+
+                        <label for="photoDriveLink">Drive/OneDrive Open Link (optional, opens when user clicks photo)</label>
                         <input type="url" id="photoDriveLink" placeholder="https://drive.google.com/... or https://onedrive.live.com/...">
 
-                        <label for="photoFile">Upload Image File (compressed to ~1MB then saved as base64)</label>
-                        <input type="file" id="photoFile" accept="image/*" required>
+                        <label for="photoFile">Upload Image File (optional, compressed to ~1MB then saved as base64)</label>
+                        <input type="file" id="photoFile" accept="image/*">
+
+                        <p style="margin:8px 0 0;color:#4a5d77;font-size:0.9rem;">
+                            Add either a file upload or an image link (Google Drive/OneDrive).
+                        </p>
 
                         <button class="btn btn-primary" type="submit">Add Photo</button>
                     </form>

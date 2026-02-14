@@ -12,6 +12,63 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
 import { onValue, ref } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-database.js";
 
+function toBase64UrlUtf8(value) {
+    const bytes = new TextEncoder().encode(value);
+    let binary = "";
+    bytes.forEach((b) => {
+        binary += String.fromCharCode(b);
+    });
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function normalizeGoogleDriveImageUrl(rawUrl) {
+    try {
+        const url = new URL(rawUrl);
+        if (!url.hostname.includes("drive.google.com")) return rawUrl;
+
+        const fileMatch = url.pathname.match(/\/file\/d\/([^/]+)/);
+        if (fileMatch?.[1]) return `https://drive.google.com/uc?export=view&id=${fileMatch[1]}`;
+
+        const id = url.searchParams.get("id");
+        if (id) return `https://drive.google.com/uc?export=view&id=${id}`;
+
+        return rawUrl;
+    } catch (_) {
+        return rawUrl;
+    }
+}
+
+function normalizeOneDriveImageUrl(rawUrl) {
+    try {
+        const url = new URL(rawUrl);
+        const host = url.hostname.toLowerCase();
+        if (!host.includes("onedrive.live.com") && !host.includes("1drv.ms")) return rawUrl;
+
+        if (host.includes("1drv.ms")) {
+            const encoded = toBase64UrlUtf8(rawUrl);
+            return `https://api.onedrive.com/v1.0/shares/u!${encoded}/root/content`;
+        }
+
+        const cid = url.searchParams.get("cid");
+        const resid = url.searchParams.get("resid");
+        if (cid && resid) {
+            return `https://onedrive.live.com/download?cid=${encodeURIComponent(cid)}&resid=${encodeURIComponent(resid)}&authkey=${encodeURIComponent(url.searchParams.get("authkey") || "")}`;
+        }
+
+        return rawUrl;
+    } catch (_) {
+        return rawUrl;
+    }
+}
+
+function normalizeCloudImageUrl(rawUrl) {
+    const trimmed = String(rawUrl || "").trim();
+    if (!trimmed) return "";
+    if (trimmed.includes("drive.google.com")) return normalizeGoogleDriveImageUrl(trimmed);
+    if (trimmed.includes("1drv.ms") || trimmed.includes("onedrive.live.com")) return normalizeOneDriveImageUrl(trimmed);
+    return trimmed;
+}
+
 function initSidebar() {
     const sidebar = document.getElementById("sidebar");
     const hamburger = document.getElementById("hamburger");
@@ -169,7 +226,7 @@ function watchGallery() {
         container.innerHTML = items
             .map(
                 (photo) => {
-                    const imageSrc = photo.image ? `data:image/jpeg;base64,${photo.image}` : (photo.url || "");
+                    const imageSrc = photo.image ? `data:image/jpeg;base64,${photo.image}` : normalizeCloudImageUrl(photo.url || "");
                     const title = photo.title || "Untitled";
                     const link = (photo.link || "").trim();
                     const body = `
