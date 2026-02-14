@@ -247,6 +247,7 @@ function watchGallery() {
                     const imageSrc = photo.image ? `data:image/jpeg;base64,${photo.image}` : normalizeCloudImageUrl(photo.url || "");
                     const title = escapeHtml(photo.title || "Untitled");
                     const link = (photo.link || "").trim();
+                    const openTarget = link || (photo.url || "").trim();
                     const body = `
                         <div style="width:100%;min-height:220px;display:grid;place-items:center;background:#f5f8fd;border:1px solid #dde6f2;border-radius:10px;padding:8px;">
                             <img src="${escapeAttr(imageSrc)}" alt="${escapeAttr(title || "Gallery photo")}" style="width:100%;height:auto;max-height:420px;object-fit:contain;border-radius:8px;display:block;">
@@ -254,11 +255,11 @@ function watchGallery() {
                         <h3 style="margin-top:10px;">${title}</h3>
                     `;
 
-                    if (link) {
+                    if (openTarget) {
                         return `
                             <article class="card">
                                 ${body}
-                                <a class="btn btn-outline gallery-open-btn" href="${escapeAttr(link)}" target="_blank" rel="noopener noreferrer">Open Gallery</a>
+                                <a class="btn btn-outline gallery-open-btn" href="${escapeAttr(openTarget)}" target="_blank" rel="noopener noreferrer">Open Gallery</a>
                             </article>`;
                     }
 
