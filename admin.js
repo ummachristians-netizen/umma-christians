@@ -1,4 +1,4 @@
-import { auth, db, rtdb, storage } from "./firebase-config.js";
+import { auth, db, rtdb } from "./firebase-config.js";
 import {
     addDoc,
     collection,
@@ -23,17 +23,12 @@ import {
 import {
     onValue,
     push,
+    get,
     ref as dbRef,
     remove,
     set,
     update as updateRtdb
 } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-database.js";
-import {
-    deleteObject,
-    getDownloadURL,
-    ref as storageRef,
-    uploadBytes
-} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-storage.js";
 
 const MAX_IMAGE_BYTES = 1024 * 1024;
 
@@ -164,6 +159,20 @@ function formatHumanDate(dateString) {
     });
 }
 
+function toMillis(value) {
+    if (typeof value === "number") return value;
+    if (value instanceof Date) return value.getTime();
+    if (typeof value === "string") {
+        const parsed = Date.parse(value);
+        return Number.isNaN(parsed) ? Date.now() : parsed;
+    }
+    // Firestore Timestamp-like object
+    if (value && typeof value === "object" && typeof value.seconds === "number") {
+        return (value.seconds * 1000) + Math.floor((value.nanoseconds || 0) / 1e6);
+    }
+    return Date.now();
+}
+
 function loadImageFromFile(file) {
     return new Promise((resolve, reject) => {
         const url = URL.createObjectURL(file);
@@ -190,22 +199,17 @@ function canvasToBlob(canvas, quality) {
     });
 }
 
-function normalizeImageUrl(rawUrl) {
-    const url = (rawUrl || "").trim();
-    if (!url) return "";
-
-    // Google Drive share links -> direct view links
-    const driveFileMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/i);
-    if (driveFileMatch) {
-        return `https://drive.google.com/uc?export=view&id=${driveFileMatch[1]}`;
-    }
-
-    const driveOpenMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
-    if (/drive\.google\.com/i.test(url) && driveOpenMatch) {
-        return `https://drive.google.com/uc?export=view&id=${driveOpenMatch[1]}`;
-    }
-
-    return url;
+function fileToBase64NoPrefix(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = String(reader.result || "");
+            const base64 = result.includes(",") ? result.split(",")[1] : result;
+            resolve(base64);
+        };
+        reader.onerror = () => reject(new Error("Failed to read file as base64."));
+        reader.readAsDataURL(file);
+    });
 }
 
 async function compressImageTo1MB(file) {
@@ -378,7 +382,7 @@ function initOfficeDashboard() {
         }
         activityFeed.innerHTML = items
             .map((a) => {
-                const time = formatHumanDate(new Date(a.createdAt || Date.now()).toISOString());
+                const time = formatHumanDate(new Date(toMillis(a.createdAt)).toISOString());
                 return `<li><strong>${a.message || "Update"}</strong><div class="event-meta"><span>${time}</span><span class="chip">${a.type || "info"}</span></div></li>`;
             })
             .join("");
@@ -445,7 +449,10 @@ function initOfficeDashboard() {
             .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         photosList.innerHTML = items
             .map(
-                (p) => `<li><strong>${p.title || ""}</strong><p>${p.url || ""}</p><button class="btn btn-outline" data-edit-photo="${p.key}" data-title="${escAttr(p.title)}" data-url="${escAttr(p.url)}" type="button">Edit</button> <button class="btn btn-danger" data-delete-photo="${p.key}" data-storage-path="${p.storagePath || ""}" type="button">Delete Photo</button></li>`
+                (p) => {
+                    const imageSrc = p.image ? `data:image/jpeg;base64,${p.image}` : (p.url || "");
+                    return `<li><strong>${p.title || ""}</strong><p><img src="${imageSrc}" alt="${escAttr(p.title)}" style="width:100%;max-width:220px;border-radius:8px;border:1px solid #dde6f2;"></p><button class="btn btn-outline" data-edit-photo="${p.key}" data-title="${escAttr(p.title)}" type="button">Edit</button> <button class="btn btn-danger" data-delete-photo="${p.key}" type="button">Delete Photo</button></li>`;
+                }
             )
             .join("");
     });
@@ -515,6 +522,10 @@ function initOfficeDashboard() {
             document.getElementById("cfgVerseText").value = cfg.verseText || "";
             document.getElementById("cfgYearTheme").value = cfg.themeYear || "";
             document.getElementById("cfgDayTheme").value = cfg.themeDay || cfg.themeSemester || "";
+            document.getElementById("cfgContactEmail").value = cfg.contactEmail || "";
+            document.getElementById("cfgFellowshipDay").value = cfg.fellowshipDay || "";
+            document.getElementById("cfgFellowshipTime").value = cfg.fellowshipTime || "";
+            document.getElementById("cfgFellowshipVenue").value = cfg.fellowshipVenue || "";
         });
 
         cfgForm.addEventListener("submit", async (e) => {
@@ -524,6 +535,10 @@ function initOfficeDashboard() {
                 verseText: document.getElementById("cfgVerseText").value.trim(),
                 themeYear: document.getElementById("cfgYearTheme").value.trim(),
                 themeDay: document.getElementById("cfgDayTheme").value.trim(),
+                contactEmail: document.getElementById("cfgContactEmail").value.trim(),
+                fellowshipDay: document.getElementById("cfgFellowshipDay").value.trim(),
+                fellowshipTime: document.getElementById("cfgFellowshipTime").value.trim(),
+                fellowshipVenue: document.getElementById("cfgFellowshipVenue").value.trim(),
                 updatedAt: Date.now()
             };
             await setDoc(doc(db, "site_config", "current"), payload, { merge: true });
@@ -537,39 +552,27 @@ function initOfficeDashboard() {
         photoForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             const title = document.getElementById("photoTitle").value.trim();
-            const rawUrl = document.getElementById("photoUrl").value.trim();
-            const photoUrl = normalizeImageUrl(rawUrl);
             const file = document.getElementById("photoFile").files[0];
-            if (!title || (!photoUrl && !file)) {
-                setStatus("Photo title and either image link or file are required.", true);
+            if (!title || !file) {
+                setStatus("Photo title and image file are required.", true);
                 return;
             }
             try {
-                const photoRef = push(dbRef(rtdb, "gallery"));
+                setStatus("Compressing image...");
+                const compressedFile = await compressImageTo1MB(file);
+                const imageBase64 = await fileToBase64NoPrefix(compressedFile);
 
-                if (photoUrl) {
-                    await set(photoRef, {
-                        title,
-                        url: photoUrl,
-                        storagePath: "",
-                        fileSize: 0,
-                        createdAt: Date.now()
-                    });
-                } else {
-                    setStatus("Compressing image...");
-                    const compressedFile = await compressImageTo1MB(file);
-                    const path = `gallery/${Date.now()}-${compressedFile.name}`;
-                    const fileRef = storageRef(storage, path);
-                    await uploadBytes(fileRef, compressedFile);
-                    const url = await getDownloadURL(fileRef);
-                    await set(photoRef, {
-                        title,
-                        url,
-                        storagePath: path,
-                        fileSize: compressedFile.size,
-                        createdAt: Date.now()
-                    });
+                if (imageBase64.length >= 1500000) {
+                    setStatus("Image is still too large after compression. Use a smaller image.", true);
+                    return;
                 }
+
+                const photoRef = push(dbRef(rtdb, "gallery"));
+                await set(photoRef, {
+                    title,
+                    image: imageBase64,
+                    createdAt: Date.now()
+                });
 
                 photoForm.reset();
                 setStatus("Gallery item added successfully.");
@@ -656,13 +659,17 @@ function initOfficeDashboard() {
             const key = editPhotoBtn.getAttribute("data-edit-photo");
             const title = prompt("Edit Photo Title", editPhotoBtn.getAttribute("data-title") || "");
             if (title === null) return;
-            const rawUrl = prompt("Edit Photo URL", editPhotoBtn.getAttribute("data-url") || "");
-            if (rawUrl === null) return;
-            const url = normalizeImageUrl(rawUrl);
+            const currentSnap = await get(dbRef(rtdb, `gallery/${key}`));
+            const current = currentSnap.val();
+            if (!current || !current.image) {
+                setStatus("Photo record missing image payload.", true);
+                return;
+            }
 
-            await updateRtdb(dbRef(rtdb, `gallery/${key}`), {
+            await set(dbRef(rtdb, `gallery/${key}`), {
                 title: title.trim(),
-                url: url.trim(),
+                image: current.image,
+                createdAt: current.createdAt || Date.now(),
                 updatedAt: Date.now()
             });
             setStatus("Photo updated.");
@@ -673,15 +680,7 @@ function initOfficeDashboard() {
         const photoBtn = e.target.closest("[data-delete-photo]");
         if (photoBtn) {
             const key = photoBtn.getAttribute("data-delete-photo");
-            const path = photoBtn.getAttribute("data-storage-path");
             await remove(dbRef(rtdb, `gallery/${key}`));
-            if (path) {
-                try {
-                    await deleteObject(storageRef(storage, path));
-                } catch (_) {
-                    // Ignore if file already removed.
-                }
-            }
             setStatus("Photo removed.");
             await logActivity("Deleted a gallery item", "gallery");
         }

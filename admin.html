@@ -108,6 +108,18 @@
                         <label for="cfgDayTheme">Theme of the Day</label>
                         <input type="text" id="cfgDayTheme" required>
 
+                        <label for="cfgContactEmail">Contact Email</label>
+                        <input type="email" id="cfgContactEmail" required>
+
+                        <label for="cfgFellowshipDay">Fellowship Day</label>
+                        <input type="text" id="cfgFellowshipDay" required>
+
+                        <label for="cfgFellowshipTime">Fellowship Time</label>
+                        <input type="text" id="cfgFellowshipTime" placeholder="6:00 PM - 8:00 PM" required>
+
+                        <label for="cfgFellowshipVenue">Fellowship Venue</label>
+                        <input type="text" id="cfgFellowshipVenue" required>
+
                         <button class="btn btn-primary" type="submit">Update Site Themes</button>
                     </form>
                 </article>
@@ -120,11 +132,8 @@
                         <label for="photoTitle">Photo Title</label>
                         <input type="text" id="photoTitle" required>
 
-                        <label for="photoUrl">Image Link (Google Drive/Direct URL)</label>
-                        <input type="url" id="photoUrl" placeholder="https://drive.google.com/... or direct image URL">
-
-                        <label for="photoFile">Or Upload Image File (auto-compressed to ~1MB)</label>
-                        <input type="file" id="photoFile" accept="image/*">
+                        <label for="photoFile">Upload Image File (compressed to ~1MB then saved as base64)</label>
+                        <input type="file" id="photoFile" accept="image/*" required>
 
                         <button class="btn btn-primary" type="submit">Add Photo</button>
                     </form>

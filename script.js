@@ -90,11 +90,19 @@ async function loadSiteConfig() {
     const verseRefEl = document.querySelector("[data-site='verse-ref']");
     const yearThemeEl = document.querySelector("[data-site='theme-year']");
     const semThemeEl = document.querySelector("[data-site='theme-semester']");
+    const contactEmailEl = document.querySelector("[data-site='contact-email']");
+    const fellowshipDayEl = document.querySelector("[data-site='fellowship-day']");
+    const fellowshipTimeEl = document.querySelector("[data-site='fellowship-time']");
+    const fellowshipVenueEl = document.querySelector("[data-site='fellowship-venue']");
 
     if (verseTextEl) verseTextEl.textContent = cfg.verseText || "Verse will be published by the ministry office.";
     if (verseRefEl) verseRefEl.textContent = cfg.verseReference || "-";
     if (yearThemeEl) yearThemeEl.textContent = cfg.themeYear || "Not set yet.";
     if (semThemeEl) semThemeEl.textContent = cfg.themeDay || cfg.themeSemester || "Not set yet.";
+    if (contactEmailEl) contactEmailEl.textContent = cfg.contactEmail || "Not set yet.";
+    if (fellowshipDayEl) fellowshipDayEl.textContent = cfg.fellowshipDay || "Not set yet.";
+    if (fellowshipTimeEl) fellowshipTimeEl.textContent = cfg.fellowshipTime || "Not set yet.";
+    if (fellowshipVenueEl) fellowshipVenueEl.textContent = cfg.fellowshipVenue || "Not set yet.";
 }
 
 function watchPrograms() {
@@ -160,7 +168,7 @@ function watchGallery() {
             .map(
                 (photo) => `
                 <article class="card">
-                    <img src="${photo.url || ""}" alt="${photo.title || "Gallery photo"}" style="width:100%;height:220px;object-fit:cover;border-radius:10px;">
+                    <img src="${photo.image ? `data:image/jpeg;base64,${photo.image}` : (photo.url || "")}" alt="${photo.title || "Gallery photo"}" style="width:100%;height:220px;object-fit:cover;border-radius:10px;">
                     <h3 style="margin-top:10px;">${photo.title || "Untitled"}</h3>
                 </article>`
             )
