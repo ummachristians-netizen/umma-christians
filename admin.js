@@ -368,16 +368,40 @@ function initOfficeDashboard() {
     const eventsList = document.getElementById("eventsList");
     const photosList = document.getElementById("adminPhotosList");
     const activityFeed = document.getElementById("activityFeed");
+    let localActivityItems = [];
+
+    const renderActivityItems = (items) => {
+        if (!activityFeed) return;
+        if (!items.length) {
+            activityFeed.innerHTML = "<li>No activity yet.</li>";
+            return;
+        }
+        activityFeed.innerHTML = items
+            .map((a) => {
+                const time = formatHumanDate(new Date(a.createdAt || Date.now()).toISOString());
+                return `<li><strong>${a.message || "Update"}</strong><div class="event-meta"><span>${time}</span><span class="chip">${a.type || "info"}</span></div></li>`;
+            })
+            .join("");
+    };
 
     const logActivity = async (message, type = "info") => {
+        const localItem = { message, type, createdAt: Date.now() };
+        localActivityItems = [localItem, ...localActivityItems].slice(0, 40);
+        renderActivityItems(localActivityItems);
+
         try {
             await addDoc(collection(db, "activity_logs"), {
                 message,
                 type,
                 createdAt: Date.now()
             });
-        } catch (_) {
-            // non-blocking
+        } catch (error) {
+            const denied =
+                error?.code === "permission-denied" ||
+                error?.code === "auth/insufficient-permission";
+            if (denied) {
+                setStatus("Activity log is blocked by Firestore rules. Update rules for activity_logs.", true);
+            }
         }
     };
 
@@ -428,19 +452,21 @@ function initOfficeDashboard() {
 
     if (activityFeed) {
         const activityQuery = query(collection(db, "activity_logs"), orderBy("createdAt", "desc"), limit(40));
-        onSnapshot(activityQuery, (snap) => {
-            if (snap.empty) {
-                activityFeed.innerHTML = "<li>No activity yet.</li>";
-                return;
+        onSnapshot(
+            activityQuery,
+            (snap) => {
+                if (snap.empty) {
+                    renderActivityItems(localActivityItems);
+                    return;
+                }
+                localActivityItems = snap.docs.map((d) => d.data());
+                renderActivityItems(localActivityItems);
+            },
+            () => {
+                renderActivityItems(localActivityItems);
+                setStatus("Realtime activity feed is blocked by Firestore rules.", true);
             }
-            activityFeed.innerHTML = snap.docs
-                .map((d) => {
-                    const a = d.data();
-                    const time = formatHumanDate(new Date(a.createdAt || Date.now()).toISOString());
-                    return `<li><strong>${a.message || "Update"}</strong><div class="event-meta"><span>${time}</span><span class="chip">${a.type || "info"}</span></div></li>`;
-                })
-                .join("");
-        });
+        );
     }
 
     const addProgramForm = document.getElementById("addProgramForm");
