@@ -2,7 +2,6 @@ import { auth, db, rtdb } from "./firebase-config.js";
 import {
     collection,
     doc,
-    getDoc,
     onSnapshot,
     orderBy,
     query
@@ -82,10 +81,7 @@ function formatHumanDate(dateString) {
     });
 }
 
-async function loadSiteConfig() {
-    const cfgSnap = await getDoc(doc(db, "site_config", "current"));
-    const cfg = cfgSnap.exists() ? cfgSnap.data() : {};
-
+function renderSiteConfig(cfg = {}) {
     const verseTextEl = document.querySelector("[data-site='verse-text']");
     const verseRefEl = document.querySelector("[data-site='verse-ref']");
     const yearThemeEl = document.querySelector("[data-site='theme-year']");
@@ -103,6 +99,12 @@ async function loadSiteConfig() {
     if (fellowshipDayEl) fellowshipDayEl.textContent = cfg.fellowshipDay || "Not set yet.";
     if (fellowshipTimeEl) fellowshipTimeEl.textContent = cfg.fellowshipTime || "Not set yet.";
     if (fellowshipVenueEl) fellowshipVenueEl.textContent = cfg.fellowshipVenue || "Not set yet.";
+}
+
+function watchSiteConfig() {
+    onSnapshot(doc(db, "site_config", "current"), (snap) => {
+        renderSiteConfig(snap.exists() ? snap.data() : {});
+    });
 }
 
 function watchPrograms() {
@@ -232,7 +234,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     initSidebar();
     highlightCurrentNav();
     initOfficeBridge();
-    await loadSiteConfig();
+    watchSiteConfig();
     watchPrograms();
     watchEvents();
     watchGallery();
